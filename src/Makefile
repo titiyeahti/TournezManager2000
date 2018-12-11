@@ -1,2 +1,7 @@
-graphe : graphe.ml
-	ocamlc -c graphe.ml
+chemin : chemin.ml
+	ocamlbuild chemin.ml
+
+clean : 
+	rm *.cmi
+	rm *.cmo
+
