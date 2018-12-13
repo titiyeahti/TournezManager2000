@@ -1,5 +1,8 @@
+main : chemin main.ml
+	ocamlc -c main.ml
+
 chemin : chemin.ml
-	ocamlbuild chemin.ml
+	ocamlc -c chemin.ml
 
 clean : 
 	rm *.cmi

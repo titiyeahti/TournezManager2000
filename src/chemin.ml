@@ -131,6 +131,6 @@ module Ville:Map.OrderedType =
 
 module VraieCarte = MakeCarte(Ville)
 
-module VraieChemin = MakeChemin(VraieCarte)
+module VraiChemin = MakeChemin(VraieCarte)
 
 
