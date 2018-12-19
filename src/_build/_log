@@ -1,0 +1,16 @@
+### Starting build.
+# Target: optimization.ml.depends, tags: { extension:ml, file:optimization.ml, ocaml, ocamldep, quiet }
+/usr/bin/ocamldep.opt -modules optimization.ml > optimization.ml.depends
+# Target: chemin.ml.depends, tags: { extension:ml, file:chemin.ml, ocaml, ocamldep, quiet }
+/usr/bin/ocamldep.opt -modules chemin.ml > chemin.ml.depends # cached
+# Target: chemin.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:chemin.cmo, file:chemin.ml, implem, ocaml, quiet }
+/usr/bin/ocamlc.opt -c -o chemin.cmo chemin.ml # cached
+# Target: optimization.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:optimization.cmo, file:optimization.ml, implem, ocaml, quiet }
+/usr/bin/ocamlc.opt -c -o optimization.cmo optimization.ml
+# Target: chemin.cmx, tags: { compile, extension:cmx, extension:ml, file:chemin.cmx, file:chemin.ml, implem, native, ocaml, quiet }
+/usr/bin/ocamlopt.opt -c -o chemin.cmx chemin.ml # cached
+# Target: optimization.cmx, tags: { compile, extension:cmx, extension:ml, file:optimization.cmx, file:optimization.ml, implem, native, ocaml, quiet }
+/usr/bin/ocamlopt.opt -c -o optimization.cmx optimization.ml
+# Target: optimization.native, tags: { dont_link_with, extension:native, file:optimization.native, link, native, ocaml, program, quiet }
+/usr/bin/ocamlopt.opt chemin.cmx optimization.cmx -o optimization.native
+# Compilation successful.
