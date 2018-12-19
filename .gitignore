@@ -1,2 +1,3 @@
 src/*.cmi
 src/*.cmo
+src/_build/*
