@@ -167,3 +167,29 @@ module IChCa : CheminCarte with type ville = Ville.t =
             "id : %i    preced : %i     suiv : %i\n" ville p s) c
     end
 
+module type Chemin =
+        sig 
+
+        end
+
+module type Carte = 
+        sig
+
+        end
+
+module CarteComplete : Carte =
+        struct
+
+        end
+
+module CarteInc : Carte =
+        struct 
+
+        end
+
+module FaitChemin ( C : Carte ) : Chemin =
+        struct
+
+        end
+
+
