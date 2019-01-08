@@ -26,9 +26,17 @@ module type Carte =
 
                 val add : S.key -> coord -> carte -> carte
 
+                val lex_add : coord -> carte -> carte
+
                 val remove : S.key -> carte -> carte
 
                 val find : S.key -> carte -> coord
+
+                val get_xy : S.key -> carte -> (float*float)
+
+                val get_inserted : S.key -> carte -> bool
+
+                val inserted : coord -> bool
 
                 val distance : S.key -> S.key -> carte -> float
 
@@ -54,9 +62,17 @@ module CarteComplete : Carte =
 
                 let add v co ca = S.add v co ca
 
+                let lex_add co ca = let v = S.cardinal ca in add v co ca
+
                 let remove v ca = S.remove v ca
 
                 let find v ca = S.find v ca
+
+                let get_xy v ca = (find v ca).c
+
+                let get_inserted v ca = (find v ca).i
+
+                let inserted co = co.i
 
                 let distance v1 v2 ca = 
                         let x1, y1 = (find v1 ca).c in
@@ -98,9 +114,20 @@ module type Chemin =
 
                 val remove : S.key -> chemin -> chemin
 
+                val fold : (S.key -> (S.key * S.key) -> 'b -> 'b ) -> chemin -> 'b -> 'b
+
                 val distance : S.key -> S.key -> chemin -> C.carte -> float
 
-                val fold : (S.key -> (S.key * S.key) -> 'b -> 'b ) -> chemin -> 'b -> 'b 
+                val dist_ensemble : S.key -> chemin -> C.carte -> float
+
+                val insert_best_spot : S.key -> chemin -> C.carte -> chemin
+
+                (* pas d'ordre aléatoire juste un ordre quelconque *)
+                val rand_build : C.carte -> chemin
+
+                val best_build : C.carte -> chemin
+
+                val worst_build : C.carte -> chemin
 
                 val print : chemin -> unit
         end
@@ -148,15 +175,104 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
                                         S.add vp (vpp, vs) (S.add vs (vp, vss) (S.remove v ch))
                         with Not_found -> ch
 
+                let fold f ch v0 = S.fold f ch v0
+
                 let rec distance v1 v2 ch ca = 
                         let v1p, v1s = find v1 ch in 
                         if v1s = v2 then 
                                 (C.distance v1 v2 ca) 
                         else
                                 (C.distance v1 v1s ca) +. distance v1s v2 ch ca
-                
-                let fold f ch v0 = S.fold f ch v0
 
+                let dist_ensemble v ch ca =
+                        if ch = empty then 0.0
+                        else
+                        let d0 = 
+                                let v0, ps = S.choose ch in
+                                C.distance v0 v ca
+                        in
+                        fold (fun vch ps best ->
+                                let _, s  = ps in
+                                let xvch, yvch = C.get_xy vch ca in
+                                let xs, ys = C.get_xy s ca in
+                                let xv, yv = C.get_xy v ca in
+                                (* distance entre les points vch et v *)
+                                let vch_v = C.distance vch v ca in
+                                (* distance orientée de vch à la base de la hauteur dans (vch v s)*)
+                                let vch_h = ((xv-.xvch)*.(xs-.xvch) +. (yv-.yvch)*.(ys-.yvch))/.
+                                    (C.distance vch s ca) in
+                                if (vch_h < 0.0 || vch_v < vch_h)  then (min best vch_v)
+                                else (min best (vch_v**2. -. vch_h**2.)**0.5)
+                                ) ch d0
+
+                let insert_best_spot v ch ca = 
+                        try 
+                                let cobaye, _ = S.choose ch in
+                                let v0 = insert v cobaye ch in 
+                                let dv0 = distance cobaye cobaye v0 ca in
+                                let res, _ =
+                                fold (fun vp (vpp, vps) (best, bd) ->
+                                        let essai = insert v vp ch in 
+                                        let dist = distance vp vp essai ca in
+                                        if dist < bd then (essai, dist)
+                                        else (best, bd)) ch (v0, dv0)
+                                in res
+                        with Not_found ->
+                                (* comme les indices sont positifs, insert x -1 ne fonctione que si
+                                 * le chemin est vide (le not found viens du choose) *)
+                                insert v (-1) ch
+                ;;
+
+                let rand_build ca =
+                        C.fold (fun v coord acc -> 
+                                insert_best_spot v acc ca) ca empty
+
+                let get_farest ca ch = 
+                        let v, d = C.fold (fun vi co (bv, bd) ->
+                                if not (C.inserted co) then 
+                                        let nd = dist_ensemble vi ch ca in
+                                        if (bv = -1 || nd > bd) then 
+                                                vi, nd
+                                        else
+                                                bv, bd
+                                else
+                                        bv, bd
+                        ) ca (-1,0.0) 
+                        in v
+
+                let get_nearest ca ch = 
+                        let v, d = C.fold (fun vi co (bv, bd) ->
+                                if not (C.inserted co) then 
+                                        let nd = dist_ensemble vi ch ca in
+                                        if (bv = -1 || nd < bd) then 
+                                                vi, nd
+                                        else
+                                                bv, bd
+                                else
+                                        bv, bd
+                        ) ca (-1,0.0) 
+                        in v
+
+                let best_build ca = 
+                        let rec aux ca ch =
+                                let v = get_nearest ca ch in
+                                if v = -1 then 
+                                        ch
+                                else
+                                        aux (C.mark v ca) (insert_best_spot v ch ca) 
+                        in
+                        aux ca empty
+
+                let worst_build ca = 
+                        let rec aux ca ch =
+                                let v = get_farest ca ch in
+                                if v = -1 then 
+                                        ch
+                                else
+                                        aux (C.mark v ca) (insert_best_spot v ch ca) 
+                        in
+                        aux ca empty
+                
                 let print ch = 
                         S.iter (fun ville ps -> 
                                 let p, s = ps in 
