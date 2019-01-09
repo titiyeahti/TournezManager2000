@@ -4,7 +4,7 @@ module Ch = FaitChemin(CarteComplete)
 
 let insert_random_ville ca = 
         CarteComplete.lex_add (CarteComplete.c_coord (string_of_int (Random.int 100000))
-        false (Random.float 100.) (Random.float 100.)) ca
+        false (Random.float 800.) (Random.float 900.)) ca
 
 let rec map_random i =
         if i = 0 then CarteComplete.empty
@@ -15,31 +15,65 @@ let rec map_random i =
 
 let _ = Random.self_init ()
 
-let m = map_random 20
+let t1 = Sys.time ()
 
-let _ = CarteComplete.print m
+let _ = Printf.printf "début : carte \n"
 
-let rb = Ch.rand_build m
+let m = map_random 100
 
-let bb = Ch.best_build m
+(* let _ = CarteComplete.print m*)
 
-let wb = Ch.worst_build m
+(*let rb = Ch.rand_build m
 
+let bb = Ch.best_build m*)
+
+let t2 = Sys.time ()
+
+let _ = Printf.printf "carte =  %f \n" (t2-.t1)
+
+let wb = Ch.rand_build m
+
+let t3 = Sys.time ()
+
+let _ = Printf.printf "chemin = %f \n" (t3-.t2)
+
+let wbopt = Ch.optimize Ch.replace wb m
+
+let t4 = Sys.time ()
+
+let _  = Printf.printf "opti = %f \n\n total = %f\n" (t4-.t3) t4 
+(*
 let _ = Printf.printf "\n de manière arbitraire \n"
-
-let _ = Ch.print rb 
 
 let _ = Printf.printf "distance totale = %f \n" (Ch.distance 1 1 rb  m)
 
 let _ = Printf.printf "\n de meilleure manière \n"
 
-let _ = Ch.print bb 
+let _ = Printf.printf "distance totale = %f \n" (Ch.distance 1 1 bb  m) *)
 
-let _ = Printf.printf "distance totale = %f \n" (Ch.distance 1 1 bb  m)
-
-let _ = Printf.printf "\n de pire manière \n"
-
-let _ = Ch.print wb
+let _ = Printf.printf "\nde pire manière \n"
 
 let _ = Printf.printf "distance totale = %f \n" (Ch.distance 1 1 wb  m)
 
+let _ = Printf.printf "le pire après optimization D = %f \n " (Ch.distance 1 1 wbopt m)
+
+(*
+open Graphics
+
+let _ = open_graph " 800x900"
+
+let _ = set_color (rgb 255 0 0)
+
+let _ = CarteComplete.plot m 
+
+let _ = set_color (rgb 0 0 255)
+
+let _ = Ch.plot wb m
+
+let _ = input_line(stdin)
+
+let _ = set_color (rgb 0 255 0)
+
+let _ = Ch.plot wbopt
+
+let _ = input_line stdin*)

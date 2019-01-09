@@ -1,13 +1,20 @@
-try : chemin try.ml
+test : try.cmo
+	ocamlc -o test graphics.cma chemin.cmo try.cmo
+	./test
+
+try.cmo : chemin.cmo try.ml
 	ocamlc -c try.ml
 
-parser : chemin parser.ml lexer.ml
+parser : chemin.cmo parser.ml lexer.ml
 	ocamlc -c parser.mli
 	ocamlc -c lexer.ml
 	ocamlc -c parser.ml
 
-chemin : chemin.ml
+chemin.cmo : chemin.ml chemin.cmi
 	ocamlc -c chemin.ml
+
+chemin.cmi : chemin.mli
+	ocamlc -c chemin.mli
 
 parser.ml : parser.mly
 	ocamlyacc parser.mly

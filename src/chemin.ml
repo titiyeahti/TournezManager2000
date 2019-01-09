@@ -45,6 +45,8 @@ module type Carte =
                 val fold : (S.key -> coord -> 'b -> 'b) -> carte -> 'b -> 'b
 
                 val print : carte -> unit
+
+                val plot : carte -> unit
         end
 
 
@@ -95,6 +97,12 @@ module CarteComplete : Carte =
                                 x, y -> Printf.printf 
                                 "%s    id : %i   coord : %f, %f\n" 
                                 coord.nom ville x y) ca
+
+                let plot ca = ()
+                (*
+                        S.iter (fun v co ->
+                                let x, y = co.c in 
+                                Graphics.plot (int_of_float x) (int_of_float y)) ca*)
         end
 
 module type Chemin =
@@ -129,7 +137,15 @@ module type Chemin =
 
                 val worst_build : C.carte -> chemin
 
+                val replace : S.key -> chemin -> C.carte -> chemin
+
+                val local_invert : S.key -> chemin -> C.carte -> chemin
+
+                val optimize : (S.key -> chemin -> C.carte -> chemin) -> chemin -> C.carte -> chemin
+
                 val print : chemin -> unit
+
+                val plot : chemin -> C.carte -> unit 
         end
 
 module FaitChemin ( X : Carte ) : Chemin with module C = X =
@@ -144,7 +160,7 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
 
                 let find v c =
                         S.find v c
-                
+
                 let insert v vp ch = 
                         (* chemin vide *)
                         if (is_empty ch) then  S.add v (v, v) ch
@@ -223,6 +239,8 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
                                 insert v (-1) ch
                 ;;
 
+                (* construction *)
+
                 let rand_build ca =
                         C.fold (fun v coord acc -> 
                                 insert_best_spot v acc ca) ca empty
@@ -272,6 +290,44 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
                                         aux (C.mark v ca) (insert_best_spot v ch ca) 
                         in
                         aux ca empty
+
+                (* optimization *)
+                
+                let replace v ch ca = 
+                        let p, s = find v ch in 
+                        (* il existe un chemin entre les deux points *)
+                        if C.distance p s ca >= 0.0 then
+                                let ch1 = remove v ch in
+                                let newch = insert_best_spot v ch1 ca in
+                                if (distance v v newch ca) < (distance v v ch ca) then 
+                                        newch
+                                else
+                                        ch
+                        else
+                                ch
+
+                let local_invert b ch ca =
+                        let a, c = find b ch in
+                        let _, d = find c ch in
+                        let ac = C.distance a c ca in
+                        let bd = C.distance b d ca in
+                        let ab = C.distance a b ca in 
+                        let cd = C.distance c d ca in
+                        if (ac >= 0.0) && (bd >= 0.0) && (ac +. bd < ab +. cd) then
+                                insert b c (remove b ch)
+                        else
+                                ch
+
+                let rec dig_deeper opt v ch ca =
+                        let ch1 = opt v ch ca in
+                        let p, s = find v ch in 
+                        if (distance v v ch ca) < (distance v v ch1 ca) then
+                                dig_deeper opt p (dig_deeper opt s ch1 ca) ca
+                        else
+                                ch
+
+                let optimize opt ch ca = 
+                        C.fold (fun v co acc -> opt v acc ca) ca ch
                 
                 let print ch = 
                         S.iter (fun ville ps -> 
@@ -279,6 +335,20 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
                                 Printf.printf 
                                 "id : %i    preced : %i     suiv : %i\n" 
                                 ville p s) ch
+
+                let plot ch ca = ()
+                        (*
+                        let v0, ps0 = S.min_binding ch in
+                        let p0, s0 = ps0 in
+                        let x, y = C.get_xy  v0 ca in
+                        let _ = Graphics.moveto (int_of_float x) (int_of_float y) in
+                        let rec aux target current =
+                                let xc, yc = C.get_xy current ca in
+                                let _ = Graphics.lineto (int_of_float xc) (int_of_float yc) in
+                                if target <> current then 
+                                        let _, s = find current ch in
+                                        aux target s
+                        in aux p0 v0*)
         end
 
 (*module CarteInc : Carte =

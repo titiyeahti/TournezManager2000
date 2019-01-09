@@ -40,6 +40,8 @@ module type Carte =
                 val fold : (S.key -> coord -> 'b -> 'b) -> carte -> 'b -> 'b
 
                 val print : carte -> unit
+
+                val plot : carte -> unit
         end
 
 
@@ -79,7 +81,15 @@ module type Chemin =
                 
                 val worst_build : C.carte -> chemin
                 
+                val replace : S.key -> chemin -> C.carte -> chemin
+
+                val local_invert : S.key -> chemin -> C.carte -> chemin
+
+                val optimize : (S.key -> chemin -> C.carte -> chemin) -> chemin -> C.carte -> chemin
+
                 val print : chemin -> unit
+
+                val plot : chemin -> C.carte -> unit
         end
 
 module FaitChemin ( X : Carte ) : Chemin with module C = X
