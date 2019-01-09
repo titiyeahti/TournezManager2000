@@ -221,23 +221,23 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
                                 else (min best (vch_v**2. -. vch_h**2.)**0.5)
                                 ) ch d0
 
-                let insert_best_spot v ch ca = 
-                        try 
-                                let cobaye, _ = S.choose ch in
-                                let v0 = insert v cobaye ch in 
-                                let dv0 = distance cobaye cobaye v0 ca in
-                                let res, _ =
-                                fold (fun vp (vpp, vps) (best, bd) ->
-                                        let essai = insert v vp ch in 
-                                        let dist = distance vp vp essai ca in
-                                        if dist < bd then (essai, dist)
-                                        else (best, bd)) ch (v0, dv0)
-                                in res
-                        with Not_found ->
-                                (* comme les indices sont positifs, insert x -1 ne fonctione que si
-                                 * le chemin est vide (le not found viens du choose) *)
+                let insert_best_spot v ch ca =
+                        if ch = empty then 
                                 insert v (-1) ch
-                ;;
+                        else
+                                let a1, ps1 = S.min_binding ch in
+                                let _, b1 = ps1 in
+                                let d1 = (C.distance a1 v ca) +. (C.distance v b1 ca) 
+                                -. (C.distance a1 b1 ca) in
+                                let spot, _ = fold (fun current (p,s) (best, best_dist) ->
+                                        let dist = (C.distance current v ca) +. 
+                                        (C.distance v s ca) -. (C.distance current s ca) in
+                                        if dist < best_dist then 
+                                                current, dist
+                                        else
+                                                best, best_dist) ch (a1, d1)
+                                in
+                                insert v spot ch
 
                 (* construction *)
 
@@ -305,27 +305,7 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
                                         ch
                         else
                                 ch
-
-                let local_invert b ch ca =
-                        let a, c = find b ch in
-                        let _, d = find c ch in
-                        let ac = C.distance a c ca in
-                        let bd = C.distance b d ca in
-                        let ab = C.distance a b ca in 
-                        let cd = C.distance c d ca in
-                        if (ac >= 0.0) && (bd >= 0.0) && (ac +. bd < ab +. cd) then
-                                insert b c (remove b ch)
-                        else
-                                ch
-
-                let rec dig_deeper opt v ch ca =
-                        let ch1 = opt v ch ca in
-                        let p, s = find v ch in 
-                        if (distance v v ch ca) < (distance v v ch1 ca) then
-                                dig_deeper opt p (dig_deeper opt s ch1 ca) ca
-                        else
-                                ch
-
+                
                 let optimize opt ch ca = 
                         C.fold (fun v co acc -> opt v acc ca) ca ch
                 
@@ -335,6 +315,50 @@ module FaitChemin ( X : Carte ) : Chemin with module C = X =
                                 Printf.printf 
                                 "id : %i    preced : %i     suiv : %i\n" 
                                 ville p s) ch
+                
+                let rec swap_sequence sb pc ch =
+                        (*let _ = Printf.printf "coucou\n" in*)
+                        let psb, ssb = find sb ch in
+                        if sb = pc then
+                                S.add sb (ssb, psb) ch
+                        else
+                                S.add sb (ssb, psb) (swap_sequence ssb pc (S.add sb (ssb, psb)ch))
+                
+                let local_invert a ch ca =
+                        let v0 = -1, 0.0 in
+                        let pa, b = find a ch in
+                        let spot, _ = fold (fun c (_, sc) (best, best_diff) ->
+                                let _, d = find c ch in
+                                if c = a || d = a || b = c then 
+                                        (best, best_diff)
+                                else
+                                        let ac = C.distance a c ca in 
+                                        let db = C.distance b d ca in
+                                        let ab = C.distance a b ca in
+                                        let cd = C.distance c d ca in 
+                                        let diff =  ab +. cd -. ac -. db in
+                                        if diff > best_diff then
+                                                c, diff
+                                        else
+                                                best, best_diff
+                        ) ch v0 in
+                        if spot = -1 then 
+                                ch
+                        else 
+                                let pc, d = find spot ch in
+                                let _, sb = find b ch in
+                                let _, sd = find d ch in 
+                                let ch_temp = 
+                                S.add a (pa, spot) 
+                                    (S.add d (b, sd) 
+                                    (S.add spot (a, pc)
+                                    (S.add b (sb, d)
+                                    ch))) in
+                                        if sb = spot then 
+                                                ch_temp 
+                                        else 
+                                                swap_sequence sb pc ch_temp 
+
 
                 let plot ch ca = ()
                         (*

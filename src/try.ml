@@ -19,7 +19,7 @@ let t1 = Sys.time ()
 
 let _ = Printf.printf "début : carte \n"
 
-let m = map_random 100
+let m = map_random 1000
 
 (* let _ = CarteComplete.print m*)
 
@@ -41,7 +41,11 @@ let wbopt = Ch.optimize Ch.replace wb m
 
 let t4 = Sys.time ()
 
-let _  = Printf.printf "opti = %f \n\n total = %f\n" (t4-.t3) t4 
+let wbopt2 = Ch.optimize Ch.local_invert wb m
+
+let t5 = Sys.time ()
+
+let _  = Printf.printf "opti1 = %f \n opti2 = %f \n total = %f\n" (t4-.t3) (t5-.t4) t5 
 (*
 let _ = Printf.printf "\n de manière arbitraire \n"
 
@@ -55,7 +59,9 @@ let _ = Printf.printf "\nde pire manière \n"
 
 let _ = Printf.printf "distance totale = %f \n" (Ch.distance 1 1 wb  m)
 
-let _ = Printf.printf "le pire après optimization D = %f \n " (Ch.distance 1 1 wbopt m)
+let _ = Printf.printf "le pire après optimization1 D = %f \n " (Ch.distance 1 1 wbopt m)
+
+let _ = Printf.printf "le pire après optimization2 D = %f \n " (Ch.distance 1 1 wbopt2 m)
 
 (*
 open Graphics
