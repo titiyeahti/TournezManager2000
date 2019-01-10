@@ -207,42 +207,36 @@ struct
         let dist_ensemble v ch ca =
                 if ch = empty then 0.0
                 else
-                        let d0 = 
+                        let d0 =
                                 let v0, ps = S.choose ch in
                                 C.distance v0 v ca
-                                in
-                fold (fun vch ps best ->
-                        let _, s  = ps in
-                        let xvch, yvch = C.get_xy vch ca in
-                        let xs, ys = C.get_xy s ca in
-                        let xv, yv = C.get_xy v ca in
-                        (* distance entre les points vch et v *)
-                        let vch_v = C.distance vch v ca in
-                        (* distance orientée de vch à la base de la hauteur dans (vch v s)*)
-                        let vch_h = ((xv-.xvch)*.(xs-.xvch) +. (yv-.yvch)*.(ys-.yvch))/.
-                            (C.distance vch s ca) in
-                        if (vch_h < 0.0 || vch_v < vch_h)  then (min best vch_v)
-                        else (min best (vch_v**2. -. vch_h**2.)**0.5)
-                        ) ch d0
+                        in fold (fun vch ps best ->
+                                let _, s  = ps in
+                                let xvch, yvch = C.get_xy vch ca in
+                                let xs, ys = C.get_xy s ca in
+                                let xv, yv = C.get_xy v ca in
+                                (* distance entre les points vch et v *)
+                                let vch_v = C.distance vch v ca in
+                                (* distance orientée de vch à la base de la hauteur dans (vch v s)*)
+                                let vch_h = ((xv-.xvch)*.(xs-.xvch) +. (yv-.yvch)*.(ys-.yvch))/. (C.distance vch s ca) in
+                                if (vch_h < 0.0 || vch_v < vch_h)  then (min best vch_v)
+                                else (min best (vch_v**2. -. vch_h**2.)**0.5)
+                                ) ch d0
 
-                        let insert_best_spot v ch ca =
-                                if ch = empty then 
-                                        insert v (-1) ch
-                        else
-                                let a1, ps1 = S.min_binding ch in
-                                let _, b1 = ps1 in
-                                let d1 = (C.distance a1 v ca) +. (C.distance v b1 ca) 
-                                -. (C.distance a1 b1 ca) in
-                                let spot, _ = fold (fun current (p,s) (best, best_dist) ->
-                                        let dist = (C.distance current v ca) +. 
-                                (C.distance v s ca) -. (C.distance current s ca) in
-                                        if dist < best_dist then 
-                                                current, dist
+        let insert_best_spot v ch ca =
+                if ch = empty then 
+                        insert v (-1) ch
+                else
+                        let a1, ps1 = S.min_binding ch in
+                        let _, b1 = ps1 in
+                        let d1 = (C.distance a1 v ca) +. (C.distance v b1 ca) -. (C.distance a1 b1 ca) in
+                        let spot, _ = fold (fun current (p,s) (best, best_dist) ->
+                                let dist = (C.distance current v ca) +. (C.distance v s ca) -. (C.distance current s ca) in
+                                if dist < best_dist then 
+                                        current, dist
                                 else
                                         best, best_dist) ch (a1, d1)
                                         in insert v spot ch
-
-                                        ;;
 
         (* cvx enveloppe *)
 
@@ -428,10 +422,3 @@ struct
                                 aux target s
                                 in aux p0 v0
 end
-
-                                        (*module CarteInc : Carte =
-                                                struct 
-
-                                        end
-*)
-
