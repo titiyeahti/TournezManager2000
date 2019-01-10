@@ -29,6 +29,8 @@ module type Carte =
                 
                 val get_xy : S.key -> carte -> (float*float)
 
+                val coord_to_tuple : coord -> (string*bool*(float*float))
+
                 val get_inserted : S.key -> carte -> bool
 
                 val inserted : coord -> bool
@@ -73,13 +75,15 @@ module type Chemin =
                 val dist_ensemble : S.key -> chemin -> C.carte -> float
 
                 val insert_best_spot : S.key -> chemin -> C.carte -> chemin
+
+                val enveloppe_convexe : C.carte -> chemin
                 (* fonctions d'insertion dans le chemin *)
 
-                val rand_build : C.carte -> chemin
+                val rand_build : C.carte -> chemin -> chemin
 
-                val best_build : C.carte -> chemin
+                val best_build : C.carte -> chemin -> chemin
                 
-                val worst_build : C.carte -> chemin
+                val worst_build : C.carte -> chemin -> chemin
                 
                 val replace : S.key -> chemin -> C.carte -> chemin
 
