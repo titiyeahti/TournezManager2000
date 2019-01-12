@@ -1,3 +1,4 @@
-src/*.cmi
-src/*.cmo
+src/*.cm[iox]
 src/_build/*
+src/*.native
+*.swp
