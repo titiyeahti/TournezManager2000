@@ -17,19 +17,19 @@ let _ = Graphics.open_graph " 100x100"
 
 let main =
         let carte = carte_from_list l in
-        let chemin = if c = "HULL" then 
+        let chemin, carte_2 = if c = "HULL" then 
                 Ch.enveloppe_convexe carte
         else
-                Ch.empty 
+                Ch.one carte
         in
         let _ = Printf.printf "1\n" in
         let chemin_rempli = (*let _ = Ch.plot chemin carte in *)
         if r = "RANDOM" then 
-                Ch.rand_build carte chemin
+                Ch.rand_build carte_2 chemin
         else if r = "NEAREST" then
-                Ch.best_build carte chemin
+                Ch.best_build carte_2 chemin
         else 
-                Ch.worst_build carte chemin
+                Ch.worst_build carte_2 chemin
         in
         let _ = Printf.printf "1\n" in
         let _ = Graphics.set_color (Graphics.rgb 255 0 0) in

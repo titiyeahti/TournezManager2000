@@ -22,6 +22,8 @@ module type Carte =
 
         val is_empty : carte -> bool
 
+        val cardinal : carte -> int
+
         val c_coord : string -> bool -> float -> float -> coord
 
         val add : S.key -> coord -> carte -> carte
@@ -61,6 +63,8 @@ struct
 
         let is_empty c = c = empty
 
+        let cardinal c = S.cardinal c
+
         let c_coord n b x y = {nom = n; i = b; c = x,y}
 
         let add v co ca = S.add v co ca
@@ -86,7 +90,7 @@ struct
 
         let mark v ca = 
                 let c0 = find v ca in
-                if c0.i=false then 
+                if c0.i then 
                         let c1 = {nom = c0.nom; i = true; c = c0.c} in
                         add v c1 ca
                 else
@@ -132,7 +136,9 @@ sig
 
         val insert_best_spot : S.key -> chemin -> C.carte -> chemin
 
-        val enveloppe_convexe : C.carte -> chemin
+        val one : C.carte -> (chemin * C.carte)
+
+        val enveloppe_convexe : C.carte -> (chemin * C.carte)
 
         (* pas d'ordre aléatoire juste un ordre quelconque *)
         val rand_build : C.carte -> chemin -> chemin
@@ -240,7 +246,7 @@ struct
 
         (* cvx enveloppe *)
 
-        let rec left_cvx p q ca ch =
+        let rec left_cvx p q (ch,ca) =
                 let xp, yp = C.get_xy p ca in
                 let xq, yq = C.get_xy q ca in 
                 let pq = C.distance p q ca in
@@ -263,9 +269,10 @@ struct
                         else
                                 best, proj_min) ca (-1, 0.0) in
                 if h = -1 then
-                        ch
+                        ch, ca
                 else
-                        left_cvx p h ca (left_cvx h q ca (insert h p ch))
+                        let new_ca = C.mark h ca in
+                        left_cvx p h (left_cvx h q ((insert h p ch), new_ca))
 
         let enveloppe_convexe ca =
                 (* point d'abcisse minimale *)
@@ -282,17 +289,21 @@ struct
                                 v, x
                         else
                                 (best, x_best)
-                                ) ca (-1, 0.0)
-                        in
-                        let _ = Printf.printf "on est presque à la récursion\n P, Q = %i, %i\n" p, q in
-                left_cvx q p ca (left_cvx p q ca (insert q p (insert p p empty)))
-
+                                ) ca (-1, 0.0) in 
+                let new_ca = C.mark p (C.mark q ca) in
+                left_cvx q p (left_cvx p q (insert q p (insert p p empty), new_ca))
+        
+        let one ca = 
+                let _ = Random.self_init () in
+                let v = Random.int (C.cardinal ca) in 
+                (insert v (-1) empty), (C.mark v ca)
 
         (* construction *)
 
-        let rand_build ca ch =
-                C.fold (fun v coord acc -> 
-                        insert_best_spot v acc ca) ca empty
+        let rand_build ca ch_init =
+                let ch, _ = C.fold (fun v co (cur_ch, cur_ca) ->
+                        insert_best_spot v cur_ch cur_ca, C.mark v cur_ca) ca (ch_init, ca)
+                in ch
 
         let get_farest ca ch = 
                 let v, d = C.fold (fun vi co (bv, bd) ->
@@ -320,25 +331,25 @@ struct
                                 ) ca (-1,0.0) 
                                 in v
 
-        let best_build ca ch = 
+        let best_build ca ch_init = 
                 let rec aux ca ch =
                         let v = get_nearest ca ch in
                         if v = -1 then 
-                                ch
+                                ch, ca
                         else
                                 aux (C.mark v ca) (insert_best_spot v ch ca) 
                         in
-                aux ca empty
+                let res, _ = aux ca ch_init in res
 
-        let worst_build ca ch = 
+        let worst_build ca ch_init = 
                 let rec aux ca ch =
                         let v = get_farest ca ch in
                         if v = -1 then 
-                                ch
+                                ch, ca
                         else
                                 aux (C.mark v ca) (insert_best_spot v ch ca) 
                         in
-                aux ca empty
+                let res, _ = aux ca ch_init in res
 
         (* optimization *)
 

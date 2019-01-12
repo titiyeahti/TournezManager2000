@@ -17,6 +17,8 @@ module type Carte =
 
                 val is_empty : carte -> bool
 
+                val cardinal : carte -> int
+
                 val c_coord : string -> bool -> float -> float -> coord
 
                 val add : S.key -> coord -> carte -> carte
@@ -76,7 +78,9 @@ module type Chemin =
 
                 val insert_best_spot : S.key -> chemin -> C.carte -> chemin
 
-                val enveloppe_convexe : C.carte -> chemin
+                val one : C.carte -> (chemin * C.carte)
+
+                val enveloppe_convexe : C.carte -> (chemin * C.carte)
                 (* fonctions d'insertion dans le chemin *)
 
                 val rand_build : C.carte -> chemin -> chemin
