@@ -90,7 +90,7 @@ struct
 
         let mark v ca = 
                 let c0 = find v ca in
-                if c0.i then 
+                if not c0.i then 
                         let c1 = {nom = c0.nom; i = true; c = c0.c} in
                         add v c1 ca
                 else
@@ -132,8 +132,6 @@ sig
 
         val distance : S.key -> S.key -> chemin -> C.carte -> float
 
-        val dist_ensemble : S.key -> chemin -> C.carte -> float
-
         val insert_best_spot : S.key -> chemin -> C.carte -> chemin
 
         val one : C.carte -> (chemin * C.carte)
@@ -153,7 +151,7 @@ sig
 
         val optimize : (S.key -> chemin -> C.carte -> chemin) -> chemin -> C.carte -> chemin
 
-        val print : chemin -> unit
+        val print : chemin -> C.carte -> unit
 
         val plot : chemin -> C.carte -> unit 
 end
@@ -210,25 +208,6 @@ struct
                                 else
                                         (C.distance v1 v1s ca) +. distance v1s v2 ch ca
 
-        let dist_ensemble v ch ca =
-                if ch = empty then 0.0
-                else
-                        let d0 =
-                                let v0, ps = S.choose ch in
-                                C.distance v0 v ca
-                        in fold (fun vch ps best ->
-                                let _, s  = ps in
-                                let xvch, yvch = C.get_xy vch ca in
-                                let xs, ys = C.get_xy s ca in
-                                let xv, yv = C.get_xy v ca in
-                                (* distance entre les points vch et v *)
-                                let vch_v = C.distance vch v ca in
-                                (* distance orientée de vch à la base de la hauteur dans (vch v s)*)
-                                let vch_h = ((xv-.xvch)*.(xs-.xvch) +. (yv-.yvch)*.(ys-.yvch))/. (C.distance vch s ca) in
-                                if (vch_h < 0.0 || vch_v < vch_h)  then (min best vch_v)
-                                else (min best (vch_v**2. -. vch_h**2.)**0.5)
-                                ) ch d0
-
         let insert_best_spot v ch ca =
                 if ch = empty then 
                         insert v (-1) ch
@@ -274,6 +253,8 @@ struct
                         let new_ca = C.mark h ca in
                         left_cvx p h (left_cvx h q ((insert h p ch), new_ca))
 
+        let print_debug ch = S.iter (fun v (p,s) -> Printf.printf "%i -> (%i, %i)\n" v p s) ch 
+
         let enveloppe_convexe ca =
                 (* point d'abcisse minimale *)
                 let p, pco = C.fold (fun v co (best,x_best) ->
@@ -302,54 +283,119 @@ struct
 
         let rand_build ca ch_init =
                 let ch, _ = C.fold (fun v co (cur_ch, cur_ca) ->
-                        insert_best_spot v cur_ch cur_ca, C.mark v cur_ca) ca (ch_init, ca)
+                        if not (C.inserted co) then 
+                                insert_best_spot v cur_ch cur_ca, C.mark v cur_ca
+                        else (cur_ch, cur_ca)) ca (ch_init, ca)
                 in ch
 
-        let get_farest ca ch = 
-                let v, d = C.fold (fun vi co (bv, bd) ->
-                        if not (C.inserted co) then 
-                                let nd = dist_ensemble vi ch ca in
-                                if (bv = -1 || nd > bd) then 
-                                        vi, nd
+        let dist_segment v a b ca =
+                let xv, yv = C.get_xy v ca in
+                let xa, ya = C.get_xy a ca in
+                let xb, yb = C.get_xy b ca in
+                let ab = C.distance a b ca in
+                let av = C.distance a v ca in
+                let vb = C.distance v b ca in
+                let ah = ((xv-.xa)*.(xb-.xa) +. (xv-.xa)*.(xb-.xa))/.ab in
+                if av > -1. && vb > -1. then 
+                        if ah > 0.0 && ah < ab then 
+                                ((av*.av)-.(ah*.ah))**0.5
                         else
-                                bv, bd
-                                else
-                                        bv, bd
-                                ) ca (-1,0.0) 
-                                in v
+                                av
+                else
+                        -1.
 
-        let get_nearest ca ch = 
-                let v, d = C.fold (fun vi co (bv, bd) ->
-                        if not (C.inserted co) then 
-                                let nd = dist_ensemble vi ch ca in
-                                if (bv = -1 || nd < bd) then 
-                                        vi, nd
+        let dist_ensemble v ch ca =
+                if ch = empty then 0.0, v
+                else
+                        fold (fun a (p,b) (best, spot) ->
+                                let dist = (*C.distance p a ca*)dist_segment v a b ca in
+                                if dist > -1. then 
+                                        if spot = -1 || dist < best then 
+                                                dist, a
+                                        else
+                                                best, spot
+                                else
+                                        best, spot
+                        ) ch (-1., -1)
+
+        let plus_proche_ville v ca = 
+                C.fold (fun cur co (best_dist, plus_proche) ->
+                        let dist = C.distance cur v ca in
+                        if cur <> v && (dist < best_dist || plus_proche = -1) && dist > -1. then
+                                dist, cur
                         else
-                                bv, bd
-                                else
-                                        bv, bd
-                                ) ca (-1,0.0) 
-                                in v
+                                best_dist, plus_proche
+                ) ca (-1., -1)
 
-        let best_build ca ch_init = 
+        let list_dist ca = 
+                C.fold (fun v co l -> 
+                        if not (C.inserted co) then
+                                let dist, spot = plus_proche_ville v ca in
+                                if dist > -1. then 
+                                        (v, (dist, spot))::l
+                                else
+                                        l
+                        else
+                                l
+                ) ca []
+
+        let get_farest ca ch l =
+                let bv, (bd, bs) =
+                List.fold_right (fun (v, (dist, spot)) (best_ville, (best_dist, best_spot)) ->
+                        let cv = C.find v ca in
+                        let cspot = C.find spot ca in
+                        if (not (C.inserted cv)) &&  (dist > best_dist || best_ville = -1) then
+                                 if (C.inserted cspot) then (v, (dist, spot))
+                                 else 
+                                         let d, s = dist_ensemble v ch ca in
+                                         if d > best_dist then 
+                                                 v, (d, s)
+                                         else
+                                                (best_ville, (best_dist, best_spot))
+                        else
+                                (best_ville, (best_dist, best_spot)))
+                l (-1, (0.0, -1)) in
+                bv, bs
+
+        let get_nearest ca ch l =
+                let bv, (bd, bs) =
+                List.fold_right (fun (v, (dist, spot)) (best_ville, (best_dist, best_spot)) ->
+                        let cv = C.find v ca in
+                        let cspot = C.find spot ca in
+                        if (not (C.inserted cv)) &&  (dist < best_dist || best_ville = -1) && dist > -1. then
+                                 if (C.inserted cspot) then (v, (dist, spot))
+                                 else 
+                                         let d, s = dist_ensemble v ch ca in
+                                         if d < best_dist || best_ville = -1 then 
+                                                 v, (d, s)
+                                         else
+                                                (best_ville, (best_dist, best_spot))
+                        else
+                                (best_ville, (best_dist, best_spot)))
+                l (-1, (-1., -1)) in
+                bv, bs
+
+        let best_build ca_init ch_init = 
+                let l = list_dist ca_init in
                 let rec aux ca ch =
-                        let v = get_nearest ca ch in
+                        let v, spot = get_nearest ca ch l in
+                        if v = -1 then
+                                ch, ca
+                        else
+                                aux (C.mark v ca) (insert v spot ch) 
+                        in
+                let res, _ = aux ca_init ch_init in res
+
+        let worst_build ca_init ch_init = 
+                let l = list_dist ca_init in
+                let rec aux ca ch =
+                        let v, spot = get_farest ca ch l in
                         if v = -1 then 
                                 ch, ca
                         else
-                                aux (C.mark v ca) (insert_best_spot v ch ca) 
+                                aux (C.mark v ca) (insert v spot ch) 
                         in
-                let res, _ = aux ca ch_init in res
-
-        let worst_build ca ch_init = 
-                let rec aux ca ch =
-                        let v = get_farest ca ch in
-                        if v = -1 then 
-                                ch, ca
-                        else
-                                aux (C.mark v ca) (insert_best_spot v ch ca) 
-                        in
-                let res, _ = aux ca ch_init in res
+                let res, _ = aux ca_init ch_init in res
 
         (* optimization *)
 
@@ -369,12 +415,20 @@ struct
         let optimize opt ch ca = 
                 C.fold (fun v co acc -> opt v acc ca) ca ch
 
-        let print ch = 
-                S.iter (fun ville ps -> 
-                        let p, s = ps in 
-                        Printf.printf 
-                        "id : %i    preced : %i     suiv : %i\n" 
-                        ville p s) ch
+        let rec print_aux cur dest ch ca = 
+                let n, _, _ = C.coord_to_tuple (C.find cur ca) in 
+                let p, s = find cur ch in  
+                let _ = Printf.printf "%s " n in
+                if p = dest then 
+                        let n2, _, _ = C.coord_to_tuple (C.find p ca) in
+                        Printf.printf "%s\n" n2                        
+                else 
+                        print_aux p dest ch ca
+
+        let print ch ca =
+                let dist = distance 0 0 ch ca in 
+                let _ = Printf.printf "%f : " dist in
+                print_aux 0 0 ch ca
 
         let rec swap_sequence sb pc ch =
                 (*let _ = Printf.printf "coucou\n" in*)

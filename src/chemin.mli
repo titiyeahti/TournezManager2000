@@ -6,19 +6,28 @@ module S : Map.S with type key = Ville.t
 
 module type Carte = 
         sig
-                (* un type enregistrement contenant les coordonnées d'une S.key ainsi que d'autres informations *)
+                (* type enregistrement qui contient *)
                 type coord
 
                 (* le type répresentant une carte *)
                 type carte
 
-                (* une carte ne contenant aucune S.key *)
+                (* une carte ne contenant aucune ville *)
                 val empty : carte
 
+                (* @requires : rien
+                 * @ensures : renvoie true si la carte est vide, false sinon
+                 * @raises : rien*)
                 val is_empty : carte -> bool
 
+                (* @requires : rien
+                 * @ensures : renvoie le cardinal de la carte
+                 * @raises : rien*)
                 val cardinal : carte -> int
-
+                
+                (* @requires : rien
+                 * @ensures : construit une coordonnée depuis des valeurs
+                 * @raises : rien*)
                 val c_coord : string -> bool -> float -> float -> coord
 
                 val add : S.key -> coord -> carte -> carte
@@ -74,8 +83,6 @@ module type Chemin =
 
                 val distance : S.key -> S.key -> chemin -> C.carte -> float
 
-                val dist_ensemble : S.key -> chemin -> C.carte -> float
-
                 val insert_best_spot : S.key -> chemin -> C.carte -> chemin
 
                 val one : C.carte -> (chemin * C.carte)
@@ -95,7 +102,7 @@ module type Chemin =
 
                 val optimize : (S.key -> chemin -> C.carte -> chemin) -> chemin -> C.carte -> chemin
 
-                val print : chemin -> unit
+                val print : chemin -> C.carte -> unit
 
                 val plot : chemin -> C.carte -> unit
         end
