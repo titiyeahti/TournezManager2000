@@ -34,6 +34,8 @@ module type Carte =
 
         val find : S.key -> carte -> coord
 
+        val close_road : S.key -> S.key -> carte -> carte
+
         val get_xy : S.key -> carte -> (float*float)
 
         val coord_to_tuple : coord -> (string*bool*(float*float))
@@ -75,6 +77,8 @@ struct
 
         let find v ca = S.find v ca
 
+        let close_road a b ca = ca
+
         let get_xy v ca = (find v ca).c
 
         let coord_to_tuple co = co.nom, co.i, co.c
@@ -110,6 +114,77 @@ struct
                         let x, y = co.c in 
                         Graphics.plot (int_of_float x) (int_of_float y)) ca
 end
+
+module CarteInc : Carte =
+struct
+        type coord = {nom : string ; i : bool; c : (float*float); rb : int S.t}
+
+        type carte = coord S.t
+
+        let empty = S.empty
+
+        let is_empty c = c = empty
+
+        let cardinal c = S.cardinal c
+
+        let c_coord n b x y = {nom = n; i = b; c = x,y; rb = S.empty}
+
+        let add v co ca = S.add v co ca
+
+        let lex_add co ca = let v = S.cardinal ca in add v co ca
+
+        let remove v ca = S.remove v ca
+
+        let find v ca = S.find v ca
+
+        let close_road a b ca = 
+                let coa = find a ca in
+                let cob = find b ca in
+                let ncoa = {nom = coa.nom; i = coa.i; c = coa.c; rb = S.add b 0 coa.rb} in
+                let ncob = {nom = cob.nom; i = cob.i; c = cob.c; rb = S.add a 0 cob.rb} in
+                add a ncoa (add b ncob ca)
+
+        let get_xy v ca = (find v ca).c
+
+        let coord_to_tuple co = co.nom, co.i, co.c
+
+        let get_inserted v ca = (find v ca).i
+
+        let inserted co = co.i
+
+        let distance v1 v2 ca =
+                let c1 = find v1 ca in
+                let c2 = find v2 ca in
+                let b = S.mem v2 c1.rb in
+                if b then -1.
+                else
+                        let x1, y1 = c1.c in
+                        let x2, y2 = c2.c in
+                        ((x1-.x2)**2. +. (y1-.y2)**2.)**0.5
+
+        let mark v ca = 
+                let c0 = find v ca in
+                if not c0.i then 
+                        let c1 = {nom = c0.nom; i = true; c = c0.c; rb = c0.rb} in
+                        add v c1 ca
+                else
+                        ca
+
+        let fold f ca v0 = 
+                S.fold f ca v0
+
+        let print ca =
+                S.iter (fun ville coord -> match coord.c with 
+                        x, y -> Printf.printf 
+                        "%s    id : %i   coord : %f, %f\n" 
+                        coord.nom ville x y) ca
+
+        let plot ca = 
+                S.iter (fun v co ->
+                        let x, y = co.c in 
+                        Graphics.plot (int_of_float x) (int_of_float y)) ca
+end
+
 
 module type Chemin =
 sig 
