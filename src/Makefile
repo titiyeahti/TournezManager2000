@@ -1,9 +1,7 @@
-test : try.cmo
-	ocamlc -o test graphics.cma chemin.cmo try.cmo
-	./test
+all : main
 
-try.cmo : chemin.cmi try.ml
-	ocamlc -c try.ml
+test : main test.sh
+	./test.sh
 
 main : chemin.ml parse.ml main.ml
 	ocamlopt -o main.native graphics.cmxa chemin.mli chemin.ml parse.ml main.ml

@@ -382,7 +382,7 @@ struct
                         if v = -1 then
                                 ch, ca
                         else
-                                aux (C.mark v ca) (insert v spot ch) 
+                                aux (C.mark v ca) (insert_best_spot v ch ca) 
                         in
                 let res, _ = aux ca_init ch_init in res
 
@@ -393,7 +393,7 @@ struct
                         if v = -1 then 
                                 ch, ca
                         else
-                                aux (C.mark v ca) (insert v spot ch) 
+                                aux (C.mark v ca) (insert_best_spot v ch ca) 
                         in
                 let res, _ = aux ca_init ch_init in res
 
